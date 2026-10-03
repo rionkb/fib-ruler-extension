@@ -42,7 +42,6 @@ export interface TabState {
   pointB: Point | null;
   hasPlacedRuler: boolean;
   interactionMode: InteractionMode;
-  levels: FibLevel[];
 }
 
 export interface SerializedTabState extends TabState {

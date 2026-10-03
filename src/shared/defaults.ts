@@ -37,7 +37,6 @@ export function createDefaultTabState(): TabState {
     pointA: null,
     pointB: null,
     hasPlacedRuler: false,
-    interactionMode: "EDIT",
-    levels: createDefaultLevels()
+    interactionMode: "EDIT"
   };
 }

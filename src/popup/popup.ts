@@ -1,4 +1,5 @@
 import { MESSAGE_TYPES } from "../shared/messages";
+import { loadSettings } from "../shared/storage";
 import type { GlobalSettings, TabState } from "../shared/types";
 
 const status = document.querySelector<HTMLParagraphElement>("#status");
@@ -15,11 +16,10 @@ async function init(): Promise<void> {
     const tabId = tab?.id;
     if (tabId === undefined) throw new Error("このページではFib Rulerを使用できません");
     const response = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.GET_TAB_STATE, tabId });
-    const settings = await chrome.storage.local.get("globalSettings");
-    const global = settings.globalSettings as GlobalSettings | undefined;
-    if (draw && global?.drawShortcut) draw.textContent = formatShortcut(global.drawShortcut);
-    if (del && global?.deleteShortcut) del.textContent = formatShortcut(global.deleteShortcut);
-    update(response as TabState & { enabled?: boolean });
+    const global: GlobalSettings = await loadSettings();
+    if (draw) draw.textContent = formatShortcut(global.drawShortcut);
+    if (del) del.textContent = formatShortcut(global.deleteShortcut);
+    update({ enabled: (response as { state?: TabState }).state?.enabled === true });
     toggle?.addEventListener("click", () => void toggleTab(tabId));
     document.querySelector("#settings")?.addEventListener("click", () => void chrome.runtime.openOptionsPage());
   } catch (reason) { setError(reason instanceof Error ? reason.message : "このページではFib Rulerを使用できません"); }

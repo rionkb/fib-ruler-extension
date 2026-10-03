@@ -1,7 +1,7 @@
 import { createDefaultSettings } from "../shared/defaults";
 import { MESSAGE_TYPES } from "../shared/messages";
 import { normalizeShortcut, validateShortcut } from "../shared/shortcut";
-import { loadSettings, saveSettings } from "../shared/storage";
+import { loadSettings } from "../shared/storage";
 import type { ColorSettings, GlobalSettings, Shortcut } from "../shared/types";
 
 const colorLabels: Record<keyof ColorSettings, string> = { base: "Base", red: "Red", green: "Green", orange: "Orange", cyan: "Cyan", blue: "Blue", purple: "Purple", pink: "Pink" };
@@ -16,4 +16,4 @@ function bindShortcuts(): void { bindShortcut("#draw", "drawShortcut"); bindShor
 function bindShortcut(selector: string, property: "drawShortcut" | "deleteShortcut"): void { const input = document.querySelector<HTMLInputElement>(selector); if (!input) return; input.value = formatShortcut(settings[property]); input.addEventListener("keydown", (event) => { event.preventDefault(); const shortcut = fromKeyboardEvent(event); const other = property === "drawShortcut" ? settings.deleteShortcut : settings.drawShortcut; const validation = validateShortcut(shortcut, other); const error = document.querySelector<HTMLParagraphElement>("#shortcut-error"); if (validation) { if (error) error.textContent = validation; return; } settings[property] = shortcut; input.value = formatShortcut(shortcut); if (error) error.textContent = ""; void persist(); }); }
 function fromKeyboardEvent(event: KeyboardEvent): Shortcut { return normalizeShortcut({ modifiers: [event.ctrlKey ? "Ctrl" : "", event.altKey ? "Alt" : "", event.shiftKey ? "Shift" : "", event.metaKey ? "Meta" : ""].filter(Boolean), key: event.key }); }
 function formatShortcut(shortcut: Shortcut): string { return [...shortcut.modifiers, shortcut.key].join(" + "); }
-async function persist(): Promise<void> { await saveSettings(settings); document.querySelector<HTMLParagraphElement>("#saved")!.textContent = "保存しました"; try { const tabs = await chrome.tabs.query({}); await Promise.all(tabs.map((tab) => tab.id ? chrome.tabs.sendMessage(tab.id, { type: MESSAGE_TYPES.SETTINGS_UPDATED, settings }).catch(() => undefined) : undefined)); } catch { /* Settings remain saved even when a tab cannot receive updates. */ } }
+async function persist(): Promise<void> { try { await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_UPDATED, settings }); document.querySelector<HTMLParagraphElement>("#saved")!.textContent = "保存しました"; } catch { document.querySelector<HTMLParagraphElement>("#shortcut-error")!.textContent = "設定を保存できません"; } }
