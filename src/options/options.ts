@@ -1,0 +1,19 @@
+import { createDefaultSettings } from "../shared/defaults";
+import { MESSAGE_TYPES } from "../shared/messages";
+import { normalizeShortcut, validateShortcut } from "../shared/shortcut";
+import { loadSettings, saveSettings } from "../shared/storage";
+import type { ColorSettings, GlobalSettings, Shortcut } from "../shared/types";
+
+const colorLabels: Record<keyof ColorSettings, string> = { base: "Base", red: "Red", green: "Green", orange: "Orange", cyan: "Cyan", blue: "Blue", purple: "Purple", pink: "Pink" };
+let settings: GlobalSettings;
+
+void init();
+
+async function init(): Promise<void> { settings = await loadSettings(); renderColors(); bindShortcuts(); bindOpacity(); document.querySelector<HTMLButtonElement>("#reset")?.addEventListener("click", () => { settings.colors = { ...createDefaultSettings().colors }; renderColors(); void persist(); }); }
+function renderColors(): void { const root = document.querySelector<HTMLDivElement>("#colors"); if (!root) return; root.replaceChildren(); (Object.keys(colorLabels) as Array<keyof ColorSettings>).forEach((key) => { const row = document.createElement("label"); row.className = "color-row"; const title = document.createElement("span"); title.textContent = colorLabels[key]; const picker = document.createElement("input"); picker.type = "color"; picker.value = settings.colors[key]; const hex = document.createElement("span"); hex.className = "hex"; hex.textContent = settings.colors[key]; picker.addEventListener("input", () => { settings.colors[key] = picker.value.toUpperCase(); hex.textContent = settings.colors[key]; void persist(); }); row.append(title, picker, hex); root.append(row); }); }
+function bindOpacity(): void { const input = document.querySelector<HTMLInputElement>("#opacity"); const output = document.querySelector<HTMLOutputElement>("#opacity-value"); if (!input || !output) return; input.value = String(Math.round(settings.bandOpacity * 100)); output.value = `${input.value}%`; input.addEventListener("input", () => { settings.bandOpacity = Number(input.value) / 100; output.value = `${input.value}%`; void persist(); }); }
+function bindShortcuts(): void { bindShortcut("#draw", "drawShortcut"); bindShortcut("#delete", "deleteShortcut"); }
+function bindShortcut(selector: string, property: "drawShortcut" | "deleteShortcut"): void { const input = document.querySelector<HTMLInputElement>(selector); if (!input) return; input.value = formatShortcut(settings[property]); input.addEventListener("keydown", (event) => { event.preventDefault(); const shortcut = fromKeyboardEvent(event); const other = property === "drawShortcut" ? settings.deleteShortcut : settings.drawShortcut; const validation = validateShortcut(shortcut, other); const error = document.querySelector<HTMLParagraphElement>("#shortcut-error"); if (validation) { if (error) error.textContent = validation; return; } settings[property] = shortcut; input.value = formatShortcut(shortcut); if (error) error.textContent = ""; void persist(); }); }
+function fromKeyboardEvent(event: KeyboardEvent): Shortcut { return normalizeShortcut({ modifiers: [event.ctrlKey ? "Ctrl" : "", event.altKey ? "Alt" : "", event.shiftKey ? "Shift" : "", event.metaKey ? "Meta" : ""].filter(Boolean), key: event.key }); }
+function formatShortcut(shortcut: Shortcut): string { return [...shortcut.modifiers, shortcut.key].join(" + "); }
+async function persist(): Promise<void> { await saveSettings(settings); document.querySelector<HTMLParagraphElement>("#saved")!.textContent = "保存しました"; try { const tabs = await chrome.tabs.query({}); await Promise.all(tabs.map((tab) => tab.id ? chrome.tabs.sendMessage(tab.id, { type: MESSAGE_TYPES.SETTINGS_UPDATED, settings }).catch(() => undefined) : undefined)); } catch { /* Settings remain saved even when a tab cannot receive updates. */ } }

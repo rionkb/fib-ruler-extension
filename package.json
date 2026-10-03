@@ -1,0 +1,20 @@
+{
+  "name": "fib-ruler-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lightweight Fibonacci ruler overlay for Chrome.",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.2",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
